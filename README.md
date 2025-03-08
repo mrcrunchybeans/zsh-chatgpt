@@ -52,8 +52,10 @@ After installation, you must set your OpenAI API Key for the script to work.
 
 ### Linux:
 export OPENAI_API_KEY="your-api-key-here"
-echo 'export OPENAI_API_KEY="your-api-key-here"' >> ~/.bashrc  # For Bash users
-echo 'export OPENAI_API_KEY="your-api-key-here"' >> ~/.zshrc   # For Zsh users
+echo 'export OPENAI_API_KEY="your-api-key-here"' >> ~/.bashrc 
+#### For Bash users
+echo 'export OPENAI_API_KEY="your-api-key-here"' >> ~/.zshrc   
+#### For Zsh users
 source ~/.bashrc || source ~/.zshrc
 
 
