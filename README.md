@@ -23,7 +23,7 @@ This repository provides a **command-line interface (CLI) for ChatGPT**, allowin
 3. After installation, restart PowerShell or run:
 . $PROFILE
 
-✅ Alternative Installation (Manual)
+### ✅ Alternative Installation (Manual)
 1. Clone the repository:
 git clone https://github.com/mrcrunchybeans/zsh-chatgpt.git
 cd zsh-chatgpt
@@ -31,12 +31,11 @@ cd zsh-chatgpt
 .\install.ps1
 3. Restart PowerShell.
 
-🔹 Linux (Bash & Zsh)
-✅ Quick Install
+## 🔹 Linux (Bash & Zsh)
 Run this command in your terminal:
 bash <(curl -sL https://raw.githubusercontent.com/mrcrunchybeans/zsh-chatgpt/main/install.sh)
 
-✅ Manual Installation
+### ✅ Manual Installation
 1. Clone the repository:
 git clone https://github.com/mrcrunchybeans/zsh-chatgpt.git
 cd zsh-chatgpt
@@ -45,59 +44,59 @@ bash install.sh
 3. Restart your shell:
 exec zsh || exec bash
 
-🔑 Setting Your OpenAI API Key
+## 🔑 Setting Your OpenAI API Key
 After installation, you must set your OpenAI API Key for the script to work.
 
-Windows:
+### Windows:
 [System.Environment]::SetEnvironmentVariable("OPENAI_API_KEY", "your-api-key-here", "User")
 
-Linux:
+### Linux:
 export OPENAI_API_KEY="your-api-key-here"
 echo 'export OPENAI_API_KEY="your-api-key-here"' >> ~/.bashrc  # For Bash users
 echo 'export OPENAI_API_KEY="your-api-key-here"' >> ~/.zshrc   # For Zsh users
 source ~/.bashrc || source ~/.zshrc
 
 
-⚡ Usage
-🔹 Windows (PowerShell & CMD)
+## ⚡ Usage
+### 🔹 Windows (PowerShell & CMD)
 Once installed, you can call ChatGPT using:
 
-Single Query Mode:
+**Single Query Mode:**
 ai "How do I list all files in a folder in PowerShell?"
 
-Interactive Mode:
+**Interactive Mode:**
 ai
 Then, type queries interactively.
 
-🔹 Linux (Bash & Zsh)
-Single Query Mode:
+### 🔹 Linux (Bash & Zsh)
+**Single Query Mode:**
 ai "How do I find large files in Linux?"
 
-Interactive Mode:
+**Interactive Mode:**
 ai
 Then, type queries interactively.
 
-🔄 Updating to the Latest Version
-Windows:
+## 🔄 Updating to the Latest Version
+### Windows:
 irm https://raw.githubusercontent.com/mrcrunchybeans/zsh-chatgpt/main/install.ps1 | iex
 
-Linux:
+### Linux:
 bash <(curl -sL https://raw.githubusercontent.com/mrcrunchybeans/zsh-chatgpt/main/install.sh)
 
-❓ Troubleshooting
-🔹 Windows
+# ❓ Troubleshooting
+## 🔹 Windows
 If ai is not recognized, restart PowerShell or run:
 . $PROFILE
 
 If PowerShell execution is restricted, enable script execution:
 Set-ExecutionPolicy Bypass -Scope Process -Force
 
-🔹 Linux
+## 🔹 Linux
 If ai is not found, check that it’s in your $PATH or re-run:
 source ~/.bashrc || source ~/.zshrc
 
-📜 License
+# 📜 License
 This project is open-source and licensed under the MIT License.
 
-❤️ Contributing
+# ❤️ Contributing
 Feel free to submit pull requests, bug reports, and feature suggestions!
