@@ -59,18 +59,22 @@ install_chatgpt_shell() {
 # Function to check for script updates
 update_script() {
     echo "Checking for updates..."
-    curl -sL "$INSTALL_SCRIPT_URL" -o "$HOME/.chatgpt_install.sh"
-    chmod +x "$HOME/.chatgpt_install.sh"
     
-    if ! cmp -s "$HOME/.chatgpt_install.sh" "$0"; then
+    TMP_FILE=$(mktemp)  # Create a temporary file
+    curl -sL "$INSTALL_SCRIPT_URL" -o "$TMP_FILE"
+
+    if ! cmp -s "$TMP_FILE" "$0"; then
         echo "New update found! Updating install script..."
-        mv "$HOME/.chatgpt_install.sh" "$0"
-        exec bash "$0"  # Restart the script
+        cp "$TMP_FILE" "$0"
+        chmod +x "$0"
+        rm "$TMP_FILE"
+        exec bash "$0"  # Restart the script with the updated version
     else
         echo "Already up to date!"
-        rm "$HOME/.chatgpt_install.sh"
+        rm "$TMP_FILE"
     fi
 }
+
 
 # Run installation steps
 install_dependencies
