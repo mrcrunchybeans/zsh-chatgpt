@@ -7,6 +7,7 @@ SCRIPT_URL="https://raw.githubusercontent.com/mrcrunchybeans/zsh-chatgpt/main/ch
 INSTALL_SCRIPT_URL="https://raw.githubusercontent.com/mrcrunchybeans/zsh-chatgpt/main/install.sh"
 ZSHRC="$HOME/.zshrc"
 BASHRC="$HOME/.bashrc"
+ZSH_CUSTOM="${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}"
 
 # Function to install dependencies
 install_dependencies() {
@@ -24,7 +25,33 @@ install_oh_my_zsh() {
     fi
 }
 
-# Function to set Zsh as default shell
+# Function to install zsh-autocomplete and zsh-syntax-highlighting
+install_zsh_plugins() {
+    echo "Installing zsh-autocomplete and zsh-syntax-highlighting..."
+
+    mkdir -p "$ZSH_CUSTOM/plugins"
+
+    # Install zsh-autocomplete
+    if [ ! -d "$ZSH_CUSTOM/plugins/zsh-autocomplete" ]; then
+        git clone --depth=1 https://github.com/marlonrichert/zsh-autocomplete.git "$ZSH_CUSTOM/plugins/zsh-autocomplete"
+    else
+        echo "zsh-autocomplete is already installed!"
+    fi
+
+    # Install zsh-syntax-highlighting
+    if [ ! -d "$ZSH_CUSTOM/plugins/zsh-syntax-highlighting" ]; then
+        git clone --depth=1 https://github.com/zsh-users/zsh-syntax-highlighting.git "$ZSH_CUSTOM/plugins/zsh-syntax-highlighting"
+    else
+        echo "zsh-syntax-highlighting is already installed!"
+    fi
+
+    # Enable plugins in .zshrc if not already enabled
+    if ! grep -q "plugins=(.*zsh-autocomplete.*zsh-syntax-highlighting.*)" "$ZSHRC"; then
+        sed -i 's/plugins=(/plugins=(zsh-autocomplete zsh-syntax-highlighting /' "$ZSHRC"
+    fi
+}
+
+# Function to set Zsh as the default shell
 set_default_shell() {
     if [ "$SHELL" != "$(which zsh)" ]; then
         echo "Setting Zsh as the default shell..."
@@ -59,7 +86,6 @@ install_chatgpt_shell() {
 # Function to check for script updates
 update_script() {
     echo "Checking for updates..."
-
     TMP_FILE=$(mktemp)  # Create a temporary file for the update
     curl -sL "$INSTALL_SCRIPT_URL" -o "$TMP_FILE"
 
@@ -77,12 +103,10 @@ update_script() {
     fi
 }
 
-
-
-
 # Run installation steps
 install_dependencies
 install_oh_my_zsh
+install_zsh_plugins
 set_default_shell
 install_chatgpt_shell
 set_api_key
@@ -90,6 +114,6 @@ update_script
 
 # Reload shell configuration
 echo "Reloading shell..."
-source "$ZSHRC" || source "$BASHRC"
+exec zsh
 
 echo "Installation complete! Restart your terminal or run 'exec zsh' to apply changes."
