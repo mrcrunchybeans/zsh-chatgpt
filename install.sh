@@ -59,22 +59,24 @@ install_chatgpt_shell() {
 # Function to check for script updates
 update_script() {
     echo "Checking for updates..."
-    
+
     TMP_FILE=$(mktemp)  # Create a temporary file for the update
     curl -sL "$INSTALL_SCRIPT_URL" -o "$TMP_FILE"
 
     if ! cmp -s "$TMP_FILE" "$0"; then
-        echo "New update found! Updating install script..."
-        cp "$TMP_FILE" "$0"
-        chmod +x "$0"
-        rm "$TMP_FILE"
-        echo "Restarting the script..."
-        exec bash "$0"  # Restart the script with the updated version
+        echo "New update found!"
+        echo "Downloading the updated script..."
+        mv "$TMP_FILE" "$HOME/.chatgpt_install_latest.sh"
+        chmod +x "$HOME/.chatgpt_install_latest.sh"
+        echo "Update complete. Please run the new script manually:"
+        echo "bash \$HOME/.chatgpt_install_latest.sh"
+        exit 0
     else
         echo "Already up to date!"
         rm "$TMP_FILE"
     fi
 }
+
 
 
 
