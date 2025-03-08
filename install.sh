@@ -60,7 +60,7 @@ install_chatgpt_shell() {
 update_script() {
     echo "Checking for updates..."
     
-    TMP_FILE=$(mktemp)  # Create a temporary file
+    TMP_FILE=$(mktemp)  # Create a temporary file for the update
     curl -sL "$INSTALL_SCRIPT_URL" -o "$TMP_FILE"
 
     if ! cmp -s "$TMP_FILE" "$0"; then
@@ -68,12 +68,14 @@ update_script() {
         cp "$TMP_FILE" "$0"
         chmod +x "$0"
         rm "$TMP_FILE"
+        echo "Restarting the script..."
         exec bash "$0"  # Restart the script with the updated version
     else
         echo "Already up to date!"
         rm "$TMP_FILE"
     fi
 }
+
 
 
 # Run installation steps
