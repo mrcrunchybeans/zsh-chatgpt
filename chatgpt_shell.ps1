@@ -4,8 +4,8 @@ if (-not $env:OPENAI_API_KEY) {
     exit 1
 }
 
-# Define system prompt for ChatGPT (adapted for PowerShell)
-$SYSTEM_PROMPT = "You are an advanced Windows PowerShell AI assistant. The user will ask for a task, and you must return a valid, executable PowerShell command. Always treat the full user query as a single request. If the user asks for files, use 'Get-ChildItem' or 'dir' appropriately. Never return explanations, comments, or text—only return a correctly formatted PowerShell command."
+# Define system prompt for ChatGPT (using plain ASCII characters)
+$SYSTEM_PROMPT = "You are an advanced Windows PowerShell AI assistant. The user will ask for a task, and you must return a valid, executable PowerShell command. Always treat the full user query as a single request. If the user asks for files, use 'Get-ChildItem' or 'dir' appropriately. Never return explanations, comments, or text - only return a correctly formatted PowerShell command."
 
 # Global variables to store the last command and its output
 $global:LAST_COMMAND = ""
