@@ -7,32 +7,37 @@ if [[ -z "$OPENAI_API_KEY" ]]; then
 fi
 
 # Define system prompt for ChatGPT
-SYSTEM_PROMPT="You are an autonomous Linux shell assistant. The user will ask for a task, and you will generate and execute valid Linux commands. If necessary, generate and execute additional commands to gather more information before responding. Always return a valid Linux shell command—never use 'where' or non-Linux commands. Never output explanations, just return a correct command."
+SYSTEM_PROMPT="You are an advanced Linux AI assistant. The user will ask for a task, and you must return a valid, executable Linux command. Never return explanations, comments, or text—only return a correctly formatted shell command."
 
 # Function to call ChatGPT API
 call_chatgpt() {
     local prompt="$1"
     local logOutput="$2"
+    local max_retries=3
+    local attempt=0
+    local RESPONSE=""
 
-    # Create API request JSON
-    RESPONSE=$(curl -s https://api.openai.com/v1/chat/completions \
-      -H "Content-Type: application/json" \
-      -H "Authorization: Bearer $OPENAI_API_KEY" \
-      -d "{
-        \"model\": \"gpt-4\",
-        \"messages\": [
-          {\"role\": \"system\", \"content\": \"$SYSTEM_PROMPT\"},
-          {\"role\": \"user\", \"content\": \"The user ran this command: '$prompt'\nHere is the command output: '$logOutput'\nWhat should the user do next? Only return a valid shell command.\"}
-        ],
-        \"temperature\": 0,
-        \"max_tokens\": 100
-      }" | jq -r '.choices[0].message.content')
+    while [[ -z "$RESPONSE" || "$RESPONSE" == "null" || "$RESPONSE" =~ "find: " || "$RESPONSE" =~ "error" ]]; do
+        if [[ $attempt -ge $max_retries ]]; then
+            echo "GPT failed to generate a valid command after $max_retries attempts."
+            return
+        fi
 
-    # Ensure GPT response is valid
-    if [[ -z "$RESPONSE" || "$RESPONSE" == "null" || "$RESPONSE" == *"where "* ]]; then
-        echo "GPT did not return a valid response."
-        return
-    fi
+        RESPONSE=$(curl -s https://api.openai.com/v1/chat/completions \
+          -H "Content-Type: application/json" \
+          -H "Authorization: Bearer $OPENAI_API_KEY" \
+          -d "{
+            \"model\": \"gpt-4\",
+            \"messages\": [
+              {\"role\": \"system\", \"content\": \"$SYSTEM_PROMPT\"},
+              {\"role\": \"user\", \"content\": \"User input: '$prompt'. Based on this request, return only a valid shell command. Never output explanations, formatting, or extra text.\"}
+            ],
+            \"temperature\": 0,
+            \"max_tokens\": 100
+          }" | jq -r '.choices[0].message.content')
+
+        ((attempt++))
+    done
 
     echo "GPT Suggested Next Step: $RESPONSE"
 
@@ -48,9 +53,22 @@ call_chatgpt() {
     fi
 }
 
+# Function to clean up user input before sending it to GPT
+sanitize_input() {
+    local input="$1"
+
+    # Convert common phrases into structured queries
+    input=$(echo "$input" | sed -E 's/find my /find /gI')
+    input=$(echo "$input" | sed -E 's/in docker volumes/ -path "/var/lib/docker/volumes/*"/gI')
+
+    echo "$input"
+}
+
 # Function to execute command, capture output, and send it to AI
 execute_and_send() {
-    local command="$1"
+    local raw_command="$1"
+    local command
+    command=$(sanitize_input "$raw_command")
     local logFile="$HOME/ai_command_output.log"
 
     # Ensure log file exists before reading it
