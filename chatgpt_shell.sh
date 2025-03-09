@@ -7,7 +7,7 @@ if [[ -z "$OPENAI_API_KEY" ]]; then
 fi
 
 # Define system prompt for ChatGPT
-SYSTEM_PROMPT="You are an autonomous Linux shell assistant. The user will ask for a task, and you will generate and execute valid Linux commands. If necessary, generate and execute additional commands to gather more information before responding. Only return a raw valid shell command—do not add explanations, formatting, or extra text."
+SYSTEM_PROMPT="You are an autonomous Linux shell assistant. The user will ask for a task, and you will generate and execute valid Linux commands. If necessary, generate and execute additional commands to gather more information before responding. Always return a valid Linux shell command—never use 'where' or non-Linux commands. Never output explanations, just return a correct command."
 
 # Function to call ChatGPT API
 call_chatgpt() {
@@ -29,7 +29,7 @@ call_chatgpt() {
       }" | jq -r '.choices[0].message.content')
 
     # Ensure GPT response is valid and contains an actual command
-    if [[ -z "$RESPONSE" || "$RESPONSE" == "null" || "$RESPONSE" == *"error"* ]]; then
+    if [[ -z "$RESPONSE" || "$RESPONSE" == "null" || "$RESPONSE" == *"error"* || "$RESPONSE" == *"where "* ]]; then
         echo "GPT did not return a valid response."
         return
     fi
@@ -37,7 +37,7 @@ call_chatgpt() {
     echo "GPT Suggested Next Step: $RESPONSE"
 
     # If AI suggests an exploratory command, execute it
-    if [[ "$RESPONSE" =~ ^(ls|cat|find|grep|df|ps|whoami|hostnamectl|ip|netstat) ]]; then
+    if [[ "$RESPONSE" =~ ^(ls|cat|find|grep|df|ps|whoami|hostnamectl|ip|netstat|which) ]]; then
         echo "AI is running an exploratory command..."
         execute_and_send "$RESPONSE"
     else
