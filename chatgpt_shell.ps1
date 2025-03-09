@@ -40,7 +40,7 @@ function Call-ChatGPT {
         $aiCommand = $response.choices[0].message.content -replace "[`r`n]", "" -replace "`"", ""
 
         # If GPT suggests a new command to gather information, execute it
-        if ($aiCommand -match "^(dir|ls|cat|type|Get-ChildItem|findstr|select-string|tasklist|whoami|systeminfo|sc)\b") {
+        if ($aiCommand -match "^(dir|ls|cat|type|Get-ChildItem|findstr|select-string|tasklist|whoami|systeminfo|sc|where)\b") {
             Write-Host "AI is running an exploratory command to gain more information..."
             Execute-And-Send $aiCommand
         } else {
@@ -58,8 +58,13 @@ function Call-ChatGPT {
 # Function to execute command, capture output, and send it to AI
 function Execute-And-Send {
     param ([string]$command)
-    
+
     $logFile = "$HOME\ai_command_output.log"
+
+    # Ensure log file exists before reading it
+    if (-not (Test-Path $logFile)) {
+        New-Item -ItemType File -Path $logFile -Force | Out-Null
+    }
 
     # Execute command and capture output
     try {
