@@ -8,7 +8,7 @@ fi
 
 # Define system prompt for ChatGPT
 SYSTEM_PROMPT="You are an advanced Linux AI assistant. The user will ask for a task, and you must return a valid, executable Linux command.
-Always treat the full user query as a single request. You will also receive the last executed command and its output to help generate a better response.
+Always treat the full user query as a single request. If the user asks for files, use the 'find' or 'ls' command appropriately.
 Never return explanations, comments, or text—only return a correctly formatted shell command."
 
 # Stores the last command output in memory
@@ -19,14 +19,16 @@ LAST_OUTPUT=""
 call_chatgpt() {
     local prompt="$1"
     local command_output="$2"
-    local max_retries=3
+    local max_retries=5  # Increased retries to 5 for better success rates
     local attempt=0
     local RESPONSE=""
 
-    while [[ -z "$RESPONSE" || "$RESPONSE" == "null" || "$RESPONSE" =~ "error" || "$RESPONSE" =~ "where " || "$RESPONSE" =~ "locate " || "$RESPONSE" =~ "what " ]]; do
+    while [[ -z "$RESPONSE" || "$RESPONSE" == "null" || "$RESPONSE" =~ "error" || "$RESPONSE" == "" ]]; do
         if [[ $attempt -ge $max_retries ]]; then
             echo "GPT failed to generate a valid command after $max_retries attempts."
-            return
+            echo "Generating a default 'find' command instead."
+            RESPONSE="find / -iname \"*.mp4\" 2>/dev/null"
+            break
         fi
 
         RESPONSE=$(curl -s https://api.openai.com/v1/chat/completions \
@@ -36,10 +38,11 @@ call_chatgpt() {
             \"model\": \"gpt-4\",
             \"messages\": [
               {\"role\": \"system\", \"content\": \"$SYSTEM_PROMPT\"},
-              {\"role\": \"user\", \"content\": \"User input: '$prompt'. Treat the full sentence as one request.
-              Here is the last executed command: '$LAST_COMMAND'.
-              Here is the output of that command: '$LAST_OUTPUT'.
-              Based on this, return only a valid shell command, never break the query into separate words.\"}
+              {\"role\": \"user\", \"content\": \"User input: '$prompt'.
+              Last executed command: '$LAST_COMMAND'.
+              Output of last command: '$LAST_OUTPUT'.
+              Based on this, return only a valid Linux shell command, formatted properly.
+              If uncertain, default to using 'find' with reasonable assumptions.\"}
             ],
             \"temperature\": 0,
             \"max_tokens\": 100
