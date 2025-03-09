@@ -7,7 +7,7 @@ if [[ -z "$OPENAI_API_KEY" ]]; then
 fi
 
 # Define system prompt for ChatGPT
-SYSTEM_PROMPT="You are an autonomous Linux shell assistant. You should execute commands when needed to gather more information before responding. Always return only the command to be run."
+SYSTEM_PROMPT="You are an autonomous Linux shell assistant. The user will ask for a task, and you will generate and execute valid Linux commands. If necessary, generate and execute additional commands to gather more information before responding. Only return a raw valid shell command—do not add explanations, formatting, or extra text."
 
 # Function to call ChatGPT API
 call_chatgpt() {
@@ -28,7 +28,8 @@ call_chatgpt() {
         \"max_tokens\": 150
       }" | jq -r '.choices[0].message.content')
 
-    if [[ -z "$RESPONSE" || "$RESPONSE" == "null" ]]; then
+    # Ensure GPT response is valid and contains an actual command
+    if [[ -z "$RESPONSE" || "$RESPONSE" == "null" || "$RESPONSE" == *"error"* ]]; then
         echo "GPT did not return a valid response."
         return
     fi
