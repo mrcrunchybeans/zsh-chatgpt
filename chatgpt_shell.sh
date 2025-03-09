@@ -47,6 +47,9 @@ execute_and_send() {
     local command="$1"
     local logFile="$HOME/ai_command_output.log"
 
+    # Ensure log file exists before reading it
+    touch "$logFile"
+
     # Execute command and capture output
     eval "$command" 2>&1 | tee "$logFile"
 
