@@ -53,13 +53,18 @@ call_chatgpt() {
     fi
 }
 
-# Function to clean up user input before sending it to GPT
+# Function to manually clean up input before sending to GPT
 sanitize_input() {
     local input="$1"
 
-    # Convert common phrases into structured queries
-    input=$(echo "$input" | sed -E 's/find my /find /gI')
-    input=$(echo "$input" | sed -E 's/in docker volumes/ -path "/var/lib/docker/volumes/*"/gI')
+    # Replace common phrases with valid Linux search commands
+    if [[ "$input" == *"find my"* ]]; then
+        input=$(echo "$input" | sed -E 's/find my /find /gI')
+    fi
+
+    if [[ "$input" == *"in docker volumes"* ]]; then
+        input=$(echo "$input" | sed -E 's/in docker volumes/ -path "\/var\/lib\/docker\/volumes\/\*"/gI')
+    fi
 
     echo "$input"
 }
