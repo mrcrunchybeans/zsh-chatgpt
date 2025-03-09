@@ -24,7 +24,7 @@ function Call-ChatGPT {
         if ($attempt -ge $max_retries) {
             Write-Host "GPT failed to generate a valid command after $max_retries attempts."
             Write-Host "Generating a default 'Get-ChildItem' command instead."
-            $RESPONSE = 'Get-ChildItem -Path C:\ -Filter "*.mp4" -Recurse -ErrorAction SilentlyContinue'
+            $RESPONSE = "Get-ChildItem -Path C:\ -Filter '*.mp4' -Recurse -ErrorAction SilentlyContinue"
             break
         }
 
@@ -57,8 +57,7 @@ function Call-ChatGPT {
 
     # Define allowed commands (adjust as needed)
     if ($RESPONSE -match "^(Get-ChildItem|Get-Content|Get-Process|whoami|hostname|ipconfig|netstat|Get-Service|Select-String)") {
-        # If the command appears to search from the root (e.g. "Get-ChildItem -Path C:\"),
-        # ask for confirmation to prevent lengthy operations.
+        # If the command appears to search from the root (e.g. "Get-ChildItem -Path C:\"), ask for confirmation.
         if ($RESPONSE -match "^Get-ChildItem\s+-Path\s+C:\\") {
             $confirmRoot = Read-Host "This command will search from the root directory and may take a long time. Run this command? (y/n)"
             if ($confirmRoot -ne "y") {
