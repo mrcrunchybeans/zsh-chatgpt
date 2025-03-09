@@ -1,95 +1,102 @@
-# Securely fetch OpenAI API Key from an environment variable
-$apiKey = [System.Environment]::GetEnvironmentVariable("OPENAI_API_KEY", "User")
-
-if (-not $apiKey) {
-    Write-Host "Error: OPENAI_API_KEY is not set. Run: `$env:OPENAI_API_KEY='your-key-here'"
+# Check that the OPENAI_API_KEY environment variable is set
+if (-not $env:OPENAI_API_KEY) {
+    Write-Host "Error: OPENAI_API_KEY is not set. Run: `$env:OPENAI_API_KEY='your-key-here'" -ForegroundColor Red
     exit 1
 }
 
-# Detect if running from CMD or PowerShell
-$isCmd = ($env:ComSpec -match "cmd.exe")
+# Define system prompt for ChatGPT (adapted for PowerShell)
+$SYSTEM_PROMPT = "You are an advanced Windows PowerShell AI assistant. The user will ask for a task, and you must return a valid, executable PowerShell command. Always treat the full user query as a single request. If the user asks for files, use 'Get-ChildItem' or 'dir' appropriately. Never return explanations, comments, or text—only return a correctly formatted PowerShell command."
 
-$systemPrompt = if ($isCmd) {
-    "You are an autonomous Windows CMD assistant. If necessary, generate and execute additional commands to gather more context before responding. You should never return explanations, just valid CMD commands."
-} else {
-    "You are an autonomous PowerShell assistant. If necessary, generate and execute additional commands to gather more context before responding. You should never return explanations, just valid PowerShell commands."
-}
+# Global variables to store the last command and its output
+$global:LAST_COMMAND = ""
+$global:LAST_OUTPUT = ""
 
-# Function to call ChatGPT API
 function Call-ChatGPT {
-    param ([string]$prompt, [string]$logOutput)
+    param (
+        [string]$prompt
+    )
 
-    $body = @{
-        "model" = "gpt-4"
-        "messages" = @(
-            @{ "role" = "system"; "content" = $systemPrompt }
-            @{ "role" = "user"; "content" = "The user ran this command: $prompt`nHere is the command output: $logOutput`nWhat should the user do next? If more information is needed, generate a command to gather more context before responding." }
-        )
-        "temperature" = 0
-        "max_tokens" = 150
-    } | ConvertTo-Json -Depth 3
+    $max_retries = 5
+    $attempt = 0
+    $RESPONSE = ""
 
-    # Send request to OpenAI API
-    try {
-        $response = Invoke-RestMethod -Uri "https://api.openai.com/v1/chat/completions" -Method Post -Headers @{
-            "Authorization" = "Bearer $apiKey"
-            "Content-Type"  = "application/json"
-        } -Body $body
-
-        # Extract AI response
-        $aiCommand = $response.choices[0].message.content -replace "[`r`n]", "" -replace "`"", ""
-
-        # Ensure AI output is not empty
-        if (-not $aiCommand -or $aiCommand -eq "null") {
-            Write-Host "GPT did not return a valid response."
-            return
+    while ([string]::IsNullOrEmpty($RESPONSE) -or $RESPONSE -eq "null" -or $RESPONSE -match "error") {
+        if ($attempt -ge $max_retries) {
+            Write-Host "GPT failed to generate a valid command after $max_retries attempts."
+            Write-Host "Generating a default 'Get-ChildItem' command instead."
+            $RESPONSE = 'Get-ChildItem -Path C:\ -Filter "*.mp4" -Recurse -ErrorAction SilentlyContinue'
+            break
         }
 
-        # If GPT suggests a valid command, execute it
-        if ($aiCommand -match "^(dir|ls|cat|type|Get-ChildItem|findstr|tasklist|whoami|systeminfo|where)\b") {
-            Write-Host "AI is running an exploratory command to gain more information..."
-            Execute-And-Send $aiCommand
-        } else {
-            Write-Host "GPT Suggested Next Step: $aiCommand"
-            $confirm = Read-Host "Run this command? (y/n)"
-            if ($confirm -eq "y") {
-                Invoke-Expression $aiCommand
+        # Build the JSON payload using a hashtable and ConvertTo-Json
+        $jsonPayload = @{
+            model    = "gpt-4"
+            messages = @(
+                @{ role = "system"; content = $SYSTEM_PROMPT },
+                @{ role = "user"; content = "User input: $prompt. Last executed command: $global:LAST_COMMAND. Output of last command: $global:LAST_OUTPUT. Based on this, return only a valid PowerShell command, formatted properly. If uncertain, default to using 'Get-ChildItem' with reasonable assumptions." }
+            )
+            temperature = 0
+            max_tokens  = 100
+        } | ConvertTo-Json
+
+        try {
+            $responseJson = Invoke-RestMethod -Uri "https://api.openai.com/v1/chat/completions" -Method Post -Headers @{
+                "Content-Type"  = "application/json"
+                "Authorization" = "Bearer $($env:OPENAI_API_KEY)"
+            } -Body $jsonPayload
+            $RESPONSE = $responseJson.choices[0].message.content.Trim()
+        }
+        catch {
+            Write-Host "Error calling API: $_"
+        }
+
+        $attempt++
+    }
+
+    Write-Host "GPT Suggested Command: $RESPONSE"
+
+    # Define allowed commands (adjust as needed)
+    if ($RESPONSE -match "^(Get-ChildItem|Get-Content|Get-Process|whoami|hostname|ipconfig|netstat|Get-Service|Select-String)") {
+        # If the command appears to search from the root (e.g. "Get-ChildItem -Path C:\"),
+        # ask for confirmation to prevent lengthy operations.
+        if ($RESPONSE -match "^Get-ChildItem\s+-Path\s+C:\\") {
+            $confirmRoot = Read-Host "This command will search from the root directory and may take a long time. Run this command? (y/n)"
+            if ($confirmRoot -ne "y") {
+                Write-Host "Command aborted."
+                return
             }
         }
-    } catch {
-        Write-Host "Error communicating with OpenAI. Check your API key."
+        Write-Host "AI is running an exploratory command..."
+        Execute-Command $RESPONSE
+    }
+    else {
+        $confirm = Read-Host "Run this command? (y/n)"
+        if ($confirm -eq "y") {
+            Execute-Command $RESPONSE
+        }
     }
 }
 
-# Function to execute command, capture output, and send it to AI
-function Execute-And-Send {
-    param ([string]$command)
-
-    $logFile = "$HOME\ai_command_output.log"
-
-    # Ensure log file exists before reading it
-    if (-not (Test-Path $logFile)) {
-        New-Item -ItemType File -Path $logFile -Force | Out-Null
-    }
-
-    # Execute command and capture output
+function Execute-Command {
+    param (
+        [string]$command
+    )
+    $global:LAST_COMMAND = $command
     try {
-        Invoke-Expression $command 2>&1 | Tee-Object -FilePath $logFile
-    } catch {
-        Write-Host "Error executing command."
+        # Execute the command and capture its output (including errors)
+        $global:LAST_OUTPUT = Invoke-Expression $command 2>&1
+        Write-Output $global:LAST_OUTPUT
     }
-
-    # Read output from the log file
-    $commandOutput = Get-Content $logFile -Raw
-
-    # Send command + output to AI
-    Call-ChatGPT $command $commandOutput
+    catch {
+        Write-Host "Error executing command: $_"
+    }
 }
 
-# Check if argument is passed for single-query mode
+# Single-query mode: if arguments are provided, execute the query and exit
 if ($args.Count -gt 0) {
-    Execute-And-Send ($args -join " ")
-    exit 0
+    $inputPrompt = $args -join " "
+    Call-ChatGPT $inputPrompt
+    exit
 }
 
 # Interactive mode
@@ -97,5 +104,5 @@ Write-Host "Interactive ChatGPT Shell - Type 'exit' to quit"
 while ($true) {
     $userInput = Read-Host "You>"
     if ($userInput -eq "exit") { break }
-    Execute-And-Send $userInput
+    Call-ChatGPT $userInput
 }
