@@ -10,9 +10,9 @@ if (-not $apiKey) {
 $isCmd = ($env:ComSpec -match "cmd.exe")
 
 $systemPrompt = if ($isCmd) {
-    "You are an autonomous Windows CMD assistant. You can execute commands to gather information before making recommendations. If necessary, generate and execute additional commands to learn more about the system before responding. You have the ability to troubleshoot in multiple steps by exploring, reading outputs, and deciding what to do next."
+    "You are an autonomous Windows CMD assistant. If necessary, generate and execute additional commands to gather more context before responding. You should never return explanations, just valid CMD commands."
 } else {
-    "You are an autonomous PowerShell assistant. You can execute commands to gather information before making recommendations. If necessary, generate and execute additional commands to learn more about the system before responding. You have the ability to troubleshoot in multiple steps by exploring, reading outputs, and deciding what to do next."
+    "You are an autonomous PowerShell assistant. If necessary, generate and execute additional commands to gather more context before responding. You should never return explanations, just valid PowerShell commands."
 }
 
 # Function to call ChatGPT API
@@ -39,8 +39,14 @@ function Call-ChatGPT {
         # Extract AI response
         $aiCommand = $response.choices[0].message.content -replace "[`r`n]", "" -replace "`"", ""
 
-        # If GPT suggests a new command to gather information, execute it
-        if ($aiCommand -match "^(dir|ls|cat|type|Get-ChildItem|findstr|select-string|tasklist|whoami|systeminfo|sc|where)\b") {
+        # Ensure AI output is not empty
+        if (-not $aiCommand -or $aiCommand -eq "null") {
+            Write-Host "GPT did not return a valid response."
+            return
+        }
+
+        # If GPT suggests a valid command, execute it
+        if ($aiCommand -match "^(dir|ls|cat|type|Get-ChildItem|findstr|tasklist|whoami|systeminfo|where)\b") {
             Write-Host "AI is running an exploratory command to gain more information..."
             Execute-And-Send $aiCommand
         } else {
