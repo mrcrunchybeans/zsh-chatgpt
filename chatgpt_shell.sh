@@ -8,7 +8,7 @@ fi
 
 # Define system prompt for ChatGPT
 SYSTEM_PROMPT="You are an advanced Linux AI assistant. The user will ask for a task, and you must return a valid, executable Linux command. 
-Never return explanations, comments, or text—only return a correctly formatted shell command."
+Only return commands that are available on a default Linux system. Never return explanations, comments, or text—only return a correctly formatted shell command."
 
 # Function to call ChatGPT API
 call_chatgpt() {
@@ -18,7 +18,7 @@ call_chatgpt() {
     local attempt=0
     local RESPONSE=""
 
-    while [[ -z "$RESPONSE" || "$RESPONSE" == "null" || "$RESPONSE" =~ "error" ]]; do
+    while [[ -z "$RESPONSE" || "$RESPONSE" == "null" || "$RESPONSE" =~ "error" || "$RESPONSE" =~ "where " || "$RESPONSE" =~ "locate " ]]; do
         if [[ $attempt -ge $max_retries ]]; then
             echo "GPT failed to generate a valid command after $max_retries attempts."
             return
@@ -31,7 +31,8 @@ call_chatgpt() {
             \"model\": \"gpt-4\",
             \"messages\": [
               {\"role\": \"system\", \"content\": \"$SYSTEM_PROMPT\"},
-              {\"role\": \"user\", \"content\": \"User input: '$prompt'. Based on this request, return only a valid shell command. Never output explanations, formatting, or extra text.\"}
+              {\"role\": \"user\", \"content\": \"User input: '$prompt'. Based on this request, return only a valid shell command. 
+              Never output explanations, formatting, or extra text. Only return commonly available Linux commands.\"}
             ],
             \"temperature\": 0,
             \"max_tokens\": 100
