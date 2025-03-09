@@ -8,12 +8,17 @@ fi
 
 # Define system prompt for ChatGPT
 SYSTEM_PROMPT="You are an advanced Linux AI assistant. The user will ask for a task, and you must return a valid, executable Linux command.
-Always treat the full user query as a single request. Never return explanations, comments, or text—only return a correctly formatted shell command."
+Always treat the full user query as a single request. You will also receive the last executed command and its output to help generate a better response.
+Never return explanations, comments, or text—only return a correctly formatted shell command."
+
+# Stores the last command output in memory
+LAST_COMMAND=""
+LAST_OUTPUT=""
 
 # Function to call ChatGPT API
 call_chatgpt() {
     local prompt="$1"
-    local logOutput="$2"
+    local command_output="$2"
     local max_retries=3
     local attempt=0
     local RESPONSE=""
@@ -31,8 +36,10 @@ call_chatgpt() {
             \"model\": \"gpt-4\",
             \"messages\": [
               {\"role\": \"system\", \"content\": \"$SYSTEM_PROMPT\"},
-              {\"role\": \"user\", \"content\": \"User input: '$prompt'. You must treat the full sentence as one request. 
-              Always return a valid shell command, never break the query into separate words.\"}
+              {\"role\": \"user\", \"content\": \"User input: '$prompt'. Treat the full sentence as one request.
+              Here is the last executed command: '$LAST_COMMAND'.
+              Here is the output of that command: '$LAST_OUTPUT'.
+              Based on this, return only a valid shell command, never break the query into separate words.\"}
             ],
             \"temperature\": 0,
             \"max_tokens\": 100
@@ -41,12 +48,12 @@ call_chatgpt() {
         ((attempt++))
     done
 
-    echo "GPT Suggested Next Step: $RESPONSE"
+    echo "GPT Suggested Command: $RESPONSE"
 
     # Ensure AI suggests a valid command before execution
     if [[ "$RESPONSE" =~ ^(ls|cat|find|grep|df|ps|whoami|hostnamectl|ip|netstat|which) ]]; then
         echo "AI is running an exploratory command..."
-        execute_and_send "$RESPONSE"
+        execute_command "$RESPONSE"
     else
         read -p "Run this command? (y/n): " CONFIRM
         if [[ "$CONFIRM" == "y" ]]; then
@@ -55,28 +62,21 @@ call_chatgpt() {
     fi
 }
 
-# Function to execute command, capture output, and send it to AI
-execute_and_send() {
+# Function to execute command and keep output in memory
+execute_command() {
     local command="$1"
-    local logFile="$HOME/ai_command_output.log"
+    LAST_COMMAND="$command"
 
-    # Ensure log file exists before reading it
-    touch "$logFile"
+    # Capture output in memory instead of a file
+    LAST_OUTPUT=$(eval "$command" 2>&1)
 
-    # Execute command and capture output
-    eval "$command" 2>&1 | tee "$logFile"
-
-    # Read output from the log file
-    local commandOutput
-    commandOutput=$(cat "$logFile")
-
-    # Send command + output to AI
-    call_chatgpt "$command" "$commandOutput"
+    # Display the output as usual
+    echo "$LAST_OUTPUT"
 }
 
 # Check if argument is passed for single-query mode
 if [[ -n "$1" ]]; then
-    execute_and_send "$1"
+    call_chatgpt "$1"
     exit 0
 fi
 
@@ -85,5 +85,5 @@ echo "Interactive ChatGPT Shell - Type 'exit' to quit"
 while true; do
     read -p "You> " USER_INPUT
     [[ "$USER_INPUT" == "exit" ]] && break
-    execute_and_send "$USER_INPUT"
+    call_chatgpt "$USER_INPUT"
 done
