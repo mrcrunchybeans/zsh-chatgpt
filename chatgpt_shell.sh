@@ -22,14 +22,14 @@ call_chatgpt() {
         \"model\": \"gpt-4\",
         \"messages\": [
           {\"role\": \"system\", \"content\": \"$SYSTEM_PROMPT\"},
-          {\"role\": \"user\", \"content\": \"The user ran this command: $prompt\nHere is the command output: $logOutput\nWhat should the user do next? If more information is needed, generate a command to gather more context before responding.\"}
+          {\"role\": \"user\", \"content\": \"The user ran this command: '$prompt'\nHere is the command output: '$logOutput'\nWhat should the user do next? Only return a valid shell command.\"}
         ],
         \"temperature\": 0,
-        \"max_tokens\": 150
+        \"max_tokens\": 100
       }" | jq -r '.choices[0].message.content')
 
-    # Ensure GPT response is valid and contains an actual command
-    if [[ -z "$RESPONSE" || "$RESPONSE" == "null" || "$RESPONSE" == *"error"* || "$RESPONSE" == *"where "* ]]; then
+    # Ensure GPT response is valid
+    if [[ -z "$RESPONSE" || "$RESPONSE" == "null" || "$RESPONSE" == *"where "* ]]; then
         echo "GPT did not return a valid response."
         return
     fi
