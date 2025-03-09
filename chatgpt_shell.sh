@@ -1,5 +1,13 @@
 #!/bin/bash
 
+# Check for required utilities
+for util in jq curl; do
+    if ! command -v "$util" >/dev/null 2>&1; then
+        echo "Error: $util is not installed. Please install $util to run this script."
+        exit 1
+    fi
+done
+
 # Securely fetch OpenAI API Key from an environment variable
 if [[ -z "$OPENAI_API_KEY" ]]; then
     echo "Error: OPENAI_API_KEY is not set. Run: export OPENAI_API_KEY='your-key-here'"
@@ -28,7 +36,7 @@ call_chatgpt() {
             break
         fi
 
-        # Construct a safe JSON payload using jq
+        # Build a safe JSON payload using jq
         json_payload=$(jq -n \
           --arg model "gpt-4" \
           --arg system_prompt "$SYSTEM_PROMPT" \
@@ -53,8 +61,16 @@ call_chatgpt() {
 
     echo "GPT Suggested Command: $RESPONSE"
 
-    # Auto-execute if command starts with one of the allowed prefixes
+    # Check if command starts with one of the allowed commands
     if [[ "$RESPONSE" =~ ^(ls|cat|find|grep|df|ps|whoami|hostnamectl|ip|netstat|which) ]]; then
+        # If the command is a global search (e.g. starting with 'find /') then ask for confirmation
+        if [[ "$RESPONSE" =~ ^find\ / ]]; then
+            read -p "This command will search from the root directory and may take a long time. Run this command? (y/n): " CONFIRM_ROOT
+            if [[ "$CONFIRM_ROOT" != "y" ]]; then
+                echo "Command aborted."
+                return
+            fi
+        fi
         echo "AI is running an exploratory command..."
         execute_command "$RESPONSE"
     else
