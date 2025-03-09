@@ -7,7 +7,8 @@ if [[ -z "$OPENAI_API_KEY" ]]; then
 fi
 
 # Define system prompt for ChatGPT
-SYSTEM_PROMPT="You are an advanced Linux AI assistant. The user will ask for a task, and you must return a valid, executable Linux command. Never return explanations, comments, or text—only return a correctly formatted shell command."
+SYSTEM_PROMPT="You are an advanced Linux AI assistant. The user will ask for a task, and you must return a valid, executable Linux command. 
+Never return explanations, comments, or text—only return a correctly formatted shell command."
 
 # Function to call ChatGPT API
 call_chatgpt() {
@@ -17,7 +18,7 @@ call_chatgpt() {
     local attempt=0
     local RESPONSE=""
 
-    while [[ -z "$RESPONSE" || "$RESPONSE" == "null" || "$RESPONSE" =~ "find: " || "$RESPONSE" =~ "error" ]]; do
+    while [[ -z "$RESPONSE" || "$RESPONSE" == "null" || "$RESPONSE" =~ "error" ]]; do
         if [[ $attempt -ge $max_retries ]]; then
             echo "GPT failed to generate a valid command after $max_retries attempts."
             return
@@ -41,7 +42,7 @@ call_chatgpt() {
 
     echo "GPT Suggested Next Step: $RESPONSE"
 
-    # If AI suggests an exploratory command, execute it
+    # Ensure AI suggests a valid command before execution
     if [[ "$RESPONSE" =~ ^(ls|cat|find|grep|df|ps|whoami|hostnamectl|ip|netstat|which) ]]; then
         echo "AI is running an exploratory command..."
         execute_and_send "$RESPONSE"
@@ -53,27 +54,9 @@ call_chatgpt() {
     fi
 }
 
-# Function to manually clean up input before sending to GPT
-sanitize_input() {
-    local input="$1"
-
-    # Replace common phrases with valid Linux search commands
-    if [[ "$input" == *"find my"* ]]; then
-        input=$(echo "$input" | sed -E 's/find my /find /gI')
-    fi
-
-    if [[ "$input" == *"in docker volumes"* ]]; then
-        input=$(echo "$input" | sed -E 's/in docker volumes/ -path "\/var\/lib\/docker\/volumes\/\*"/gI')
-    fi
-
-    echo "$input"
-}
-
 # Function to execute command, capture output, and send it to AI
 execute_and_send() {
-    local raw_command="$1"
-    local command
-    command=$(sanitize_input "$raw_command")
+    local command="$1"
     local logFile="$HOME/ai_command_output.log"
 
     # Ensure log file exists before reading it
